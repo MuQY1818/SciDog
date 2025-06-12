@@ -1,6 +1,10 @@
 import json
 import os
 import sys
+
+# Add the script's directory to the Python path to resolve local module imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # 从 data_parser.py 导入核心数据解析函数
 from data_parser import parse_all_conferences
 
