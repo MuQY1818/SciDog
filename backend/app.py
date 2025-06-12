@@ -1,8 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-
-# 从我们的爬虫脚本中导入函数
-from scrapers.ccf_cn_scraper import scrape_ccf_data_from_script
+from data_parser import parse_all_conferences # 引入新的解析器
 
 app = Flask(__name__)
 # 为整个应用开启 CORS 支持
@@ -18,10 +16,10 @@ def get_conferences():
     提供会议数据的 API 端点。
     它会实时运行爬虫并返回最新的数据。
     """
-    print("Received request for /api/conferences. Running scraper...")
-    conferences = scrape_ccf_data_from_script()
-    print(f"Scraper finished, found {len(conferences)} conferences.")
-    return jsonify(conferences)
+    print("Received request for /api/conferences. Parsing from local YAML files...")
+    all_conferences = parse_all_conferences()
+    print(f"Parser finished, found {len(all_conferences)} conferences.")
+    return jsonify(all_conferences)
 
 if __name__ == '__main__':
     # 监听所有网络接口，而不仅仅是本地回环地址

@@ -1,207 +1,372 @@
-<script setup>
-import { ref, onMounted, computed } from 'vue';
-import axios from 'axios';
-
-// --- 响应式状态定义 ---
-const conferences = ref([]);
-const isLoading = ref(true);
-const error = ref(null);
-
-// 筛选相关的状态
-const selectedTypes = ref([]); // 选中的领域
-const selectedRank = ref('All'); // 选中的CCF等级
-const searchQuery = ref('');   // 搜索关键词
-
-// 从后端获取的所有会议类型
-const allTypes = ref([]);
-
-const API_URL = 'http://localhost:5000/api/conferences';
-
-// --- 数据获取与处理 ---
-onMounted(async () => {
-  try {
-    const response = await axios.get(API_URL);
-    conferences.value = response.data;
-    // 从数据中提取出所有的会议类型，并去重
-    const types = new Set(response.data.map(c => c.type));
-    allTypes.value = Array.from(types);
-    selectedTypes.value = allTypes.value; // 默认全选
-  } catch (err) {
-    console.error('获取会议数据失败:', err);
-    error.value = '无法加载会议数据，请确保后端服务正在运行。';
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-// --- 计算属性，用于动态过滤会议列表 ---
-const filteredConferences = computed(() => {
-  return conferences.value.filter(conf => {
-    // 按 CCF 等级过滤
-    const rankMatch = selectedRank.value === 'All' || conf.ccfRank === selectedRank.value;
-    // 按领域类型过滤
-    const typeMatch = selectedTypes.value.includes(conf.type);
-    // 按搜索词过滤 (忽略大小写)
-    const searchMatch = conf.shortName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                        (conf.fullName && conf.fullName.toLowerCase().includes(searchQuery.value.toLowerCase()));
-
-    return rankMatch && typeMatch && searchMatch;
-  });
-});
-
-const rankButtons = ['All', 'A', 'B', 'C'];
-</script>
-
 <template>
-  <el-container id="app-container">
-    <el-header class="app-header">
-      <h1>科研狗 (SciDog)</h1>
-      <p>会议截止日期速查</p>
+  <el-container class="main-container">
+    <el-header class="main-header">
+      <h1>
+        <el-icon><School /></el-icon>
+        SciDog - 科研狗
+      </h1>
+      <p>一个聚合全球学术会议 DDL 的平台</p>
     </el-header>
 
     <el-main>
-      <!-- 筛选器区域 -->
+      <!-- Filter Controls -->
       <el-card class="filter-card">
-        <div class="filter-section">
-          <el-checkbox-group v-model="selectedTypes">
-            <el-checkbox v-for="type in allTypes" :key="type" :label="type" border>{{ type }}</el-checkbox>
+        <div class="filter-controls">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索会议名称或描述..."
+            clearable
+            class="search-input"
+          >
+            <template #prepend>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+
+          <el-checkbox-group v-model="selectedRanks" class="rank-filter">
+            <el-checkbox-button label="A">CCF-A</el-checkbox-button>
+            <el-checkbox-button label="B">CCF-B</el-checkbox-button>
+            <el-checkbox-button label="C">CCF-C</el-checkbox-button>
+            <el-checkbox-button label="N">Non-CCF</el-checkbox-button>
           </el-checkbox-group>
         </div>
+
         <el-divider />
-        <div class="filter-controls">
-            <el-input
-              v-model="searchQuery"
-              placeholder="搜索会议简称或全称"
-              clearable
-              class="search-input"
-            />
-            <el-button-group>
-              <el-button
-                v-for="rank in rankButtons"
-                :key="rank"
-                :type="selectedRank === rank ? 'primary' : 'default'"
-                @click="selectedRank = rank"
-              >
-                CCF {{ rank }}
-              </el-button>
-            </el-button-group>
+
+        <div class="type-filters">
+           <el-checkbox v-model="showAllTypes" @change="handleShowAllTypes" class="all-types-checkbox">全部分类</el-checkbox>
+           <el-checkbox-group v-model="selectedTypes">
+              <el-checkbox v-for="(name, key) in types" :key="key" :label="key">{{ name }}</el-checkbox>
+           </el-checkbox-group>
         </div>
       </el-card>
 
-      <!-- 会议列表区域 -->
-      <div v-if="isLoading" class="loading-state">
-        <p>正在努力加载会议数据中...</p>
-      </div>
-      <div v-else-if="error" class="error-state">
-        <p>糟糕，出错了：{{ error }}</p>
-      </div>
-      <div v-else>
-        <p class="result-count">共找到 {{ filteredConferences.length }} 个会议</p>
+      <!-- Conference List -->
+      <div v-if="paginatedConfs.length > 0">
         <el-row :gutter="20">
-          <el-col :span="24" v-for="conf in filteredConferences" :key="conf.id" class="conference-col">
-            <el-card shadow="hover" class="conference-card">
-              <div class="card-header">
-                <a :href="conf.link" target="_blank" rel="noopener noreferrer" class="conference-title">
-                  {{ conf.shortName }} {{ conf.year }}
-                </a>
-              </div>
-              <div class="card-body">
-                <p class="conference-fullname">{{ conf.fullName }}</p>
-                <p class="conference-deadline"><b>Deadline:</b> {{ conf.deadline }} ({{ conf.timezone }})</p>
-                <p class="conference-location"><b>Location:</b> {{ conf.place }}</p>
-              </div>
-              <div class="card-footer">
-                <el-tag size="small">{{ conf.type }}</el-tag>
-                <el-tag type="success" size="small">CCF {{ conf.ccfRank }}</el-tag>
+          <el-col
+            v-for="conf in paginatedConfs"
+            :key="conf.id"
+            :xs="24" :sm="12" :md="8"
+          >
+            <el-card class="conf-card" shadow="hover">
+              <template #header>
+                <div class="card-header">
+                  <a :href="conf.link" target="_blank">{{ conf.title }} {{ conf.year }}</a>
+                  <el-tag :type="getRankType(conf.ccfRank)">{{ conf.ccfRank === 'N' ? 'Non-CCF' : 'CCF-' + conf.ccfRank }}</el-tag>
+                </div>
+              </template>
+              <div class="conf-body">
+                 <p class="conf-description">{{ conf.description }}</p>
+                 <el-tag size="small" type="info" class="type-tag">{{ conf.subname }}</el-tag>
+                 <el-divider />
+                 <div class="deadline-info">
+                    <div v-if="conf.deadline.toUpperCase() !== 'TBD' && isUpcoming(conf.deadline)">
+                       <el-icon color="#E6A23C"><AlarmClock /></el-icon>
+                       <span class="countdown-text">
+                         <vue-countdown :time="getTimeRemaining(conf.deadline, conf.timezone)" v-slot="{ days, hours, minutes }">
+                            还剩 {{ days }} 天 {{ hours }} 时 {{ minutes }} 分
+                         </vue-countdown>
+                       </span>
+                       <div class="deadline-date">({{ formatDeadline(conf.deadline, conf.timezone) }})</div>
+                    </div>
+                    <div v-else-if="conf.deadline.toUpperCase() !== 'TBD'">
+                       <el-icon color="#F56C6C"><CircleCloseFilled /></el-icon>
+                       <span class="deadline-text">已截止</span>
+                       <div class="deadline-date">({{ formatDeadline(conf.deadline, conf.timezone) }})</div>
+                    </div>
+                    <div v-else>
+                       <el-icon color="#909399"><QuestionFilled /></el-icon>
+                       <span class="deadline-text">TBD</span>
+                    </div>
+                 </div>
               </div>
             </el-card>
           </el-col>
         </el-row>
       </div>
+      <el-empty v-else description="没有找到符合条件的会议"></el-empty>
+
+      <!-- Pagination -->
+      <el-pagination
+        v-if="filteredConfs.length > 0"
+        background
+        layout="prev, pager, next"
+        :page-size="pageSize"
+        :total="filteredConfs.length"
+        @current-change="handlePageChange"
+        v-model:current-page="currentPage"
+        class="main-pagination"
+      />
     </el-main>
   </el-container>
 </template>
 
+<script>
+import { defineComponent, ref, computed, onMounted, watch } from "vue";
+import axios from "axios";
+import moment from "moment-timezone";
+import VueCountdown from "@chenfengyuan/vue-countdown";
+
+export default defineComponent({
+  name: "App",
+  components: {
+    VueCountdown,
+  },
+  setup() {
+    // --- Reactive State ---
+    const allConfs = ref([]);
+    const types = ref({});
+    const searchQuery = ref("");
+    const selectedRanks = ref(["A", "B", "C", "N"]);
+    const selectedTypes = ref([]);
+    const showAllTypes = ref(true);
+    const pageSize = ref(12);
+    const currentPage = ref(1);
+
+    // --- Computed Properties ---
+    const filteredConfs = computed(() => {
+      let confs = allConfs.value;
+
+      // Filter by search query
+      if (searchQuery.value) {
+        const lowerCaseQuery = searchQuery.value.toLowerCase();
+        confs = confs.filter(
+          (conf) =>
+            conf.title.toLowerCase().includes(lowerCaseQuery) ||
+            conf.description.toLowerCase().includes(lowerCaseQuery)
+        );
+      }
+
+      // Filter by rank
+      if (selectedRanks.value.length > 0) {
+        confs = confs.filter((conf) => selectedRanks.value.includes(conf.ccfRank));
+      }
+
+      // Filter by type
+      if (!showAllTypes.value && selectedTypes.value.length > 0) {
+          confs = confs.filter(conf => selectedTypes.value.includes(conf.type))
+      }
+
+      return confs;
+    });
+
+    const paginatedConfs = computed(() => {
+      const start = (currentPage.value - 1) * pageSize.value;
+      const end = start + pageSize.value;
+      return filteredConfs.value.slice(start, end);
+    });
+
+    // --- Methods ---
+    const fetchData = async () => {
+      try {
+        const res = await axios.get("/api/conferences");
+        allConfs.value = res.data.conferences;
+        types.value = res.data.type_mapping;
+        // Initially, select all types
+        selectedTypes.value = Object.keys(res.data.type_mapping);
+      } catch (error) {
+        console.error("Failed to fetch conferences:", error);
+      }
+    };
+
+    const handlePageChange = (page) => {
+      currentPage.value = page;
+    };
+    
+    const handleShowAllTypes = (value) => {
+        if(value){
+            selectedTypes.value = Object.keys(types.value);
+        } else {
+            selectedTypes.value = [];
+        }
+    };
+
+    const getRankType = (rank) => {
+        const types = {'A': 'danger', 'B': 'warning', 'C': 'success'};
+        return types[rank] || 'info';
+    }
+    
+    const getDeadlineMoment = (deadline, timezone) => {
+      let tz = timezone ? timezone.trim() : 'UTC';
+      if (tz.toUpperCase() === 'AOE') {
+        tz = 'Etc/GMT+12';
+      }
+      if (!moment.tz.names().includes(tz)) {
+        tz = 'UTC';
+      }
+      return moment.tz(deadline, 'YYYY-MM-DD HH:mm:ss', tz);
+    };
+
+    const getTimeRemaining = (deadline, timezone) => {
+      if (!deadline || deadline.toUpperCase() === 'TBD') return 0;
+      const deadlineMoment = getDeadlineMoment(deadline, timezone);
+      const now = moment();
+      return Math.max(0, deadlineMoment.diff(now));
+    };
+
+    const isUpcoming = (deadline) => {
+       return getTimeRemaining(deadline, 'UTC') > 0;
+    };
+    
+    const formatDeadline = (deadline, timezone) => {
+       if (!deadline || deadline.toUpperCase() === 'TBD') return 'TBD';
+       const deadlineMoment = getDeadlineMoment(deadline, timezone);
+       return deadlineMoment.tz(moment.tz.guess()).format('YYYY-MM-DD HH:mm');
+    }
+
+    // --- Watchers ---
+    watch(selectedTypes, (newVal, oldVal) => {
+        if(newVal.length === Object.keys(types.value).length){
+            showAllTypes.value = true;
+        } else if (newVal.length === 0 && oldVal.length > 0) {
+            // from some to none
+        }
+        else {
+            showAllTypes.value = false;
+        }
+    })
+
+    // --- Lifecycle Hooks ---
+    onMounted(() => {
+      fetchData();
+    });
+
+    return {
+      searchQuery,
+      selectedRanks,
+      selectedTypes,
+      showAllTypes,
+      types,
+      filteredConfs,
+      paginatedConfs,
+      pageSize,
+      currentPage,
+      handlePageChange,
+      handleShowAllTypes,
+      getRankType,
+      getTimeRemaining,
+      isUpcoming,
+      formatDeadline
+    };
+  },
+});
+</script>
+
 <style>
-/* 基础和布局 */
+/* Global Styles */
 body {
   background-color: #f4f6f9;
-}
-#app-container {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-.app-header {
-  text-align: center;
-  padding: 20px 0;
-}
-.app-header h1 {
-  font-size: 2.5rem;
-  color: #2c3e50;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  margin: 0;
 }
 
-/* 筛选卡片 */
+/* Main Layout */
+.main-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.main-header {
+  text-align: center;
+  margin-bottom: 20px;
+  height: auto;
+  padding: 20px 0;
+}
+
+.main-header h1 {
+  font-size: 2.5em;
+  color: #303133;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.main-header p {
+  color: #909399;
+  font-size: 1.1em;
+}
+
+/* Filters */
 .filter-card {
   margin-bottom: 20px;
 }
-.filter-section .el-checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
+
 .filter-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 20px;
 }
+
 .search-input {
-  max-width: 300px;
+  max-width: 400px;
 }
 
-/* 结果计数 */
-.result-count {
-  color: #606266;
-  margin-bottom: 20px;
+.type-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+.all-types-checkbox {
+    border-right: 1px solid #dcdfe6;
+    padding-right: 15px;
 }
 
-/* 会议卡片 */
-.conference-col {
+
+/* Conference Card */
+.conf-card {
   margin-bottom: 20px;
+  height: calc(100% - 20px);
 }
-.conference-card .card-header {
-  font-size: 1.25rem;
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-weight: bold;
-  margin-bottom: 10px;
 }
-.conference-title {
-  color: #303133;
+.card-header a {
+  color: #409eff;
   text-decoration: none;
 }
-.conference-title:hover {
-  color: #409eff;
-}
-.conference-card .card-body p {
-  margin: 5px 0;
-  color: #606266;
-  font-size: 0.9rem;
-}
-.conference-card .card-footer {
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #e4e7ed;
-  display: flex;
-  gap: 10px;
+.card-header a:hover {
+  text-decoration: underline;
 }
 
-/* 加载和错误状态 */
-.loading-state, .error-state {
-  text-align: center;
-  padding: 50px;
-  font-size: 1.2rem;
-  color: #7f8c8d;
+.conf-body .conf-description {
+  color: #606266;
+  font-size: 0.9em;
+  min-height: 50px;
 }
-.error-state {
-  color: #c0392b;
+.conf-body .type-tag {
+    margin-bottom: 10px;
+}
+
+.deadline-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95em;
+}
+.deadline-info .el-icon {
+    font-size: 1.2em;
+}
+.countdown-text, .deadline-text {
+    font-weight: 500;
+}
+.deadline-date {
+    color: #909399;
+    font-size: 0.85em;
+    margin-left: auto;
+}
+
+
+/* Pagination */
+.main-pagination {
+  justify-content: center;
+  margin-top: 20px;
 }
 </style>

@@ -1,6 +1,5 @@
 import requests
 import re
-import ast
 import json
 
 # 数据源：一个纯净的 HTML 表格页面，但数据实际在<script>标签中
@@ -20,21 +19,41 @@ def scrape_ccf_data_from_script():
         
         html_content = response.text
         
-        # 使用正则表达式找到所有 rows.push({...}) 的调用
-        # re.DOTALL 使得 '.' 可以匹配包括换行符在内的任意字符
+        # 使用正则表达式找到所有 rows.push({...}) 的调用块
         pattern = re.compile(r"rows\.push\((.*?)\)", re.DOTALL)
         matches = pattern.findall(html_content)
         
         conferences = []
-        for match in matches:
-            try:
-                # match 是一个形如 {'key':'value', ...} 的字符串
-                # ast.literal_eval 可以安全地将这个字符串转为 Python 字典
-                conf_dict = ast.literal_eval(match)
-                conferences.append(conf_dict)
-            except (ValueError, SyntaxError) as e:
-                print(f"解析单条会议数据时出错: {match}, 错误: {e}")
-                continue
+        # 定义提取各个字段的正则表达式
+        field_patterns = {
+            'id': re.compile(r"id:\s*(\d+)"),
+            'type': re.compile(r"type:\s*'([^']*)'"),
+            'shortName': re.compile(r"shortName:\s*'([^']*)'"),
+            'fullName': re.compile(r"fullName:\s*'([^']*)'"),
+            'ccfRank': re.compile(r"ccfRank:\s*'([^']*)'"),
+            'deadline': re.compile(r"deadline:\s*'([^']*)'"),
+            'timezone': re.compile(r"timezone:\s*'([^']*)'"),
+            'date': re.compile(r"date:\s*'([^']*)'"),
+            'place': re.compile(r"place:\s*'([^']*)'"),
+            'link': re.compile(r"link:\s*'([^']*)'"),
+            'year': re.compile(r"year:\s*'([^']*)'")
+        }
+
+        for block in matches:
+            conf_dict = {}
+            all_fields_found = True
+            for field, pattern in field_patterns.items():
+                match = pattern.search(block)
+                if match:
+                    conf_dict[field] = match.group(1).strip()
+                else:
+                    # 如果是 id 或 year，给一个默认值
+                    if field in ['id', 'year']:
+                        conf_dict[field] = 'N/A'
+                    else:
+                        conf_dict[field] = None # 其他字段可以为None
+
+            conferences.append(conf_dict)
                 
         return conferences
 

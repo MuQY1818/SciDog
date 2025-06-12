@@ -137,4 +137,7 @@ dmypy.json
 cython_debug/
 
 # Conda environments
-.conda 
+.conda
+
+# Local data sources
+backend/data_source/ 
