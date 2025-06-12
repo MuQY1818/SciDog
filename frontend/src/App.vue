@@ -142,11 +142,12 @@ export default defineComponent({
         );
       }
 
-      if (selectedRanks.value.length > 0) {
-        confs = confs.filter((conf) => selectedRanks.value.includes(conf.ccfRank));
-      }
+      // Filter by rank. If no ranks are selected, the list will be correctly empty.
+      confs = confs.filter((conf) => selectedRanks.value.includes(conf.ccfRank));
 
-      if (!showAllTypes.value && selectedTypes.value.length > 0) {
+      // Filter by type. If "All Types" is unchecked, filter by the selected types array.
+      // If selectedTypes is empty, this correctly results in an empty conference list.
+      if (!showAllTypes.value) {
         confs = confs.filter(conf => selectedTypes.value.includes(conf.type))
       }
 
