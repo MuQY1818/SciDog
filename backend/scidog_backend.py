@@ -1,28 +1,8 @@
 import json
-from flask import Flask, jsonify
-from flask_cors import CORS
 import os
+import sys
 # 从 data_parser.py 导入核心数据解析函数
 from data_parser import parse_all_conferences
-
-app = Flask(__name__)
-CORS(app)
-
-# 缓存加载的数据，避免每次请求都重新解析
-_conference_data = None
-
-def load_conferences():
-    global _conference_data
-    if _conference_data is None:
-        print("Parsing conference data from source files...")
-        _conference_data = parse_all_conferences()
-        print("Conference data loaded and cached.")
-    return _conference_data
-
-@app.route('/api/conferences', methods=['GET'])
-def get_conferences():
-    data = load_conferences()
-    return jsonify(data)
 
 def generate_static_json():
     """
@@ -43,15 +23,38 @@ def generate_static_json():
     
     # 保存数据到静态 JSON 文件
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(data_to_save, f, ensure_ascii=False, indent=2) # Use indent=2 for smaller file size
+        json.dump(data_to_save, f, ensure_ascii=False, indent=2)
         
     print(f"Successfully generated conferences.json at: {output_path}")
 
 
 if __name__ == '__main__':
-    import sys
     if len(sys.argv) > 1 and sys.argv[1] == 'generate':
         generate_static_json()
     else:
-        # 移除 pandas 依赖，因为它只在旧版 load_conferences 中使用
+        # --- Flask App related imports and setup ---
+        # These are only imported when running the web server, not during static generation.
+        from flask import Flask, jsonify
+        from flask_cors import CORS
+
+        app = Flask(__name__)
+        CORS(app)
+
+        # 缓存加载的数据，避免每次请求都重新解析
+        _conference_data = None
+
+        def load_conferences():
+            global _conference_data
+            if _conference_data is None:
+                print("Parsing conference data from source files...")
+                _conference_data = parse_all_conferences()
+                print("Conference data loaded and cached.")
+            return _conference_data
+
+        @app.route('/api/conferences', methods=['GET'])
+        def get_conferences():
+            data = load_conferences()
+            return jsonify(data)
+
+        print("Starting Flask server...")
         app.run(debug=True) 
