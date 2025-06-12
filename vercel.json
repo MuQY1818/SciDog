@@ -2,13 +2,6 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/app.py",
-      "use": "@vercel/python",
-      "config": {
-        "includeFiles": "backend/data_source/**"
-      }
-    },
-    {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -17,10 +10,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "backend/app.py"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
