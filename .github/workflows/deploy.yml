@@ -53,7 +53,8 @@ jobs:
         run: pip install pyyaml
 
       - name: Generate static conference data
-        run: python backend/scidog_backend.py generate
+        run: python scidog_backend.py generate
+        working-directory: ./backend
 
       - name: Build
         run: npm run build
