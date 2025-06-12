@@ -163,9 +163,14 @@ export default defineComponent({
     // --- Methods ---
     const fetchData = async () => {
       try {
-        // 在生产环境 (例如 Zeabur) 会使用注入的环境变量，本地开发时则使用相对路径
-        const baseURL = import.meta.env.VITE_API_BASE_URL || "";
-        const res = await axios.get(`${baseURL}/api/conferences`);
+        // 在开发环境和打包后的 Electron 应用中，后端服务都运行在本地的 5000 端口
+        // const baseURL = "http://127.0.0.1:5000";
+        // const res = await axios.get(`${baseURL}/api/conferences`);
+
+        // New: Fetch data from the static JSON file.
+        // The file is in the `public` directory, so it will be served at the root.
+        const res = await axios.get('/conferences.json');
+        
         allConfs.value = res.data.conferences;
         types.value = res.data.type_mapping;
         selectedTypes.value = Object.keys(res.data.type_mapping);
