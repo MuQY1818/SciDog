@@ -2,7 +2,9 @@
   <el-container class="main-container">
     <el-header class="main-header">
       <h1>
-        <el-icon><School /></el-icon>
+        <el-icon>
+          <School />
+        </el-icon>
         SciDog - 科研狗
       </h1>
       <p>一个聚合全球学术会议 DDL 的平台</p>
@@ -12,14 +14,11 @@
       <!-- Filter Controls -->
       <el-card class="filter-card">
         <div class="filter-controls">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索会议名称或描述..."
-            clearable
-            class="search-input"
-          >
+          <el-input v-model="searchQuery" placeholder="搜索会议名称或描述..." clearable class="search-input">
             <template #prepend>
-              <el-icon><Search /></el-icon>
+              <el-icon>
+                <Search />
+              </el-icon>
             </template>
           </el-input>
 
@@ -34,52 +33,65 @@
         <el-divider />
 
         <div class="type-filters">
-           <el-checkbox v-model="showAllTypes" @change="handleShowAllTypes" class="all-types-checkbox">全部分类</el-checkbox>
-           <el-checkbox-group v-model="selectedTypes">
-              <el-checkbox v-for="(name, key) in types" :key="key" :label="key">{{ name }}</el-checkbox>
-           </el-checkbox-group>
+          <el-checkbox v-model="showAllTypes" @change="handleShowAllTypes" class="all-types-checkbox">全部分类</el-checkbox>
+          <el-checkbox-group v-model="selectedTypes">
+            <el-checkbox v-for="(name, key) in types" :key="key" :label="key">{{ name }}</el-checkbox>
+          </el-checkbox-group>
         </div>
       </el-card>
 
       <!-- Conference List -->
       <div v-if="paginatedConfs.length > 0">
         <el-row :gutter="20">
-          <el-col
-            v-for="conf in paginatedConfs"
-            :key="conf.id"
-            :xs="24" :sm="12" :md="8"
-          >
+          <el-col v-for="conf in paginatedConfs" :key="conf.id" :xs="24" :sm="12" :md="8">
             <el-card class="conf-card" shadow="hover">
               <template #header>
                 <div class="card-header">
                   <a :href="conf.link" target="_blank">{{ conf.title }} {{ conf.year }}</a>
-                  <el-tag :type="getRankType(conf.ccfRank)">{{ conf.ccfRank === 'N' ? 'Non-CCF' : 'CCF-' + conf.ccfRank }}</el-tag>
+                  <el-tag :type="getRankType(conf.ccfRank)">{{ conf.ccfRank === 'N' ? 'Non-CCF' : 'CCF-' + conf.ccfRank
+                    }}</el-tag>
                 </div>
               </template>
               <div class="conf-body">
-                 <p class="conf-description">{{ conf.description }}</p>
-                 <el-tag size="small" type="info" class="type-tag">{{ conf.subname }}</el-tag>
-                 <el-divider />
-                 <div class="deadline-info">
-                    <div v-if="conf.deadline.toUpperCase() !== 'TBD' && isUpcoming(conf.deadline)">
-                       <el-icon color="#E6A23C"><AlarmClock /></el-icon>
-                       <span class="countdown-text">
-                         <vue-countdown :time="getTimeRemaining(conf.deadline, conf.timezone)" v-slot="{ days, hours, minutes }">
-                            还剩 {{ days }} 天 {{ hours }} 时 {{ minutes }} 分
-                         </vue-countdown>
-                       </span>
-                       <div class="deadline-date">({{ formatDeadline(conf.deadline, conf.timezone) }})</div>
+                <p class="conf-description">{{ conf.description }}</p>
+                <el-tag size="small" type="info" class="type-tag">{{ conf.subname }}</el-tag>
+                <el-divider />
+                <div class="deadline-info">
+                  <div class="countdown-container"
+                    v-if="conf.deadline.toUpperCase() !== 'TBD' && isUpcoming(conf.deadline)">
+                    <div class="countdown-wrapper">
+                      <el-icon color="#E6A23C">
+                        <AlarmClock />
+                      </el-icon>
+                      <span class="countdown-text">
+                        <vue-countdown :time="getTimeRemaining(conf.deadline, conf.timezone)"
+                          v-slot="{ days, hours, minutes, seconds }">
+                          还剩 {{ days }} 天 {{ hours }} 时 {{ minutes }} 分 {{ seconds }} 秒
+                        </vue-countdown>
+                      </span>
+                      <div class="deadline-date">({{ formatDeadline(conf.deadline, conf.timezone) }})</div>
                     </div>
-                    <div v-else-if="conf.deadline.toUpperCase() !== 'TBD'">
-                       <el-icon color="#F56C6C"><CircleCloseFilled /></el-icon>
-                       <span class="deadline-text">已截止</span>
-                       <div class="deadline-date">({{ formatDeadline(conf.deadline, conf.timezone) }})</div>
+                    <div class="progress-wrapper"
+                      v-if="getDeadlineProgress(conf.deadline, conf.timezone).percentage > 0">
+                      <el-progress :percentage="getDeadlineProgress(conf.deadline, conf.timezone).percentage"
+                        :status="getDeadlineProgress(conf.deadline, conf.timezone).status" :text-inside="true"
+                        :stroke-width="14" />
                     </div>
-                    <div v-else>
-                       <el-icon color="#909399"><QuestionFilled /></el-icon>
-                       <span class="deadline-text">TBD</span>
-                    </div>
-                 </div>
+                  </div>
+                  <div class="countdown-wrapper" v-else-if="conf.deadline.toUpperCase() !== 'TBD'">
+                    <el-icon color="#F56C6C">
+                      <CircleCloseFilled />
+                    </el-icon>
+                    <span class="deadline-text">已截止</span>
+                    <div class="deadline-date">({{ formatDeadline(conf.deadline, conf.timezone) }})</div>
+                  </div>
+                  <div class="countdown-wrapper" v-else>
+                    <el-icon color="#909399">
+                      <QuestionFilled />
+                    </el-icon>
+                    <span class="deadline-text">TBD</span>
+                  </div>
+                </div>
               </div>
             </el-card>
           </el-col>
@@ -88,16 +100,9 @@
       <el-empty v-else description="没有找到符合条件的会议"></el-empty>
 
       <!-- Pagination -->
-      <el-pagination
-        v-if="filteredConfs.length > 0"
-        background
-        layout="prev, pager, next"
-        :page-size="pageSize"
-        :total="filteredConfs.length"
-        @current-change="handlePageChange"
-        v-model:current-page="currentPage"
-        class="main-pagination"
-      />
+      <el-pagination v-if="filteredConfs.length > 0" background layout="prev, pager, next" :page-size="pageSize"
+        :total="filteredConfs.length" @current-change="handlePageChange" v-model:current-page="currentPage"
+        class="main-pagination" />
     </el-main>
   </el-container>
 </template>
@@ -128,7 +133,6 @@ export default defineComponent({
     const filteredConfs = computed(() => {
       let confs = allConfs.value;
 
-      // Filter by search query
       if (searchQuery.value) {
         const lowerCaseQuery = searchQuery.value.toLowerCase();
         confs = confs.filter(
@@ -138,14 +142,12 @@ export default defineComponent({
         );
       }
 
-      // Filter by rank
       if (selectedRanks.value.length > 0) {
         confs = confs.filter((conf) => selectedRanks.value.includes(conf.ccfRank));
       }
 
-      // Filter by type
       if (!showAllTypes.value && selectedTypes.value.length > 0) {
-          confs = confs.filter(conf => selectedTypes.value.includes(conf.type))
+        confs = confs.filter(conf => selectedTypes.value.includes(conf.type))
       }
 
       return confs;
@@ -163,7 +165,6 @@ export default defineComponent({
         const res = await axios.get("/api/conferences");
         allConfs.value = res.data.conferences;
         types.value = res.data.type_mapping;
-        // Initially, select all types
         selectedTypes.value = Object.keys(res.data.type_mapping);
       } catch (error) {
         console.error("Failed to fetch conferences:", error);
@@ -173,20 +174,20 @@ export default defineComponent({
     const handlePageChange = (page) => {
       currentPage.value = page;
     };
-    
+
     const handleShowAllTypes = (value) => {
-        if(value){
-            selectedTypes.value = Object.keys(types.value);
-        } else {
-            selectedTypes.value = [];
-        }
+      if (value) {
+        selectedTypes.value = Object.keys(types.value);
+      } else {
+        selectedTypes.value = [];
+      }
     };
 
     const getRankType = (rank) => {
-        const types = {'A': 'danger', 'B': 'warning', 'C': 'success'};
-        return types[rank] || 'info';
+      const types = { 'A': 'danger', 'B': 'warning', 'C': 'success' };
+      return types[rank] || 'info';
     }
-    
+
     const getDeadlineMoment = (deadline, timezone) => {
       let tz = timezone ? timezone.trim() : 'UTC';
       if (tz.toUpperCase() === 'AOE') {
@@ -206,26 +207,46 @@ export default defineComponent({
     };
 
     const isUpcoming = (deadline) => {
-       return getTimeRemaining(deadline, 'UTC') > 0;
+      return getTimeRemaining(deadline, 'UTC') > 0;
     };
-    
+
     const formatDeadline = (deadline, timezone) => {
-       if (!deadline || deadline.toUpperCase() === 'TBD') return 'TBD';
-       const deadlineMoment = getDeadlineMoment(deadline, timezone);
-       return deadlineMoment.tz(moment.tz.guess()).format('YYYY-MM-DD HH:mm');
+      if (!deadline || deadline.toUpperCase() === 'TBD') return 'TBD';
+      const deadlineMoment = getDeadlineMoment(deadline, timezone);
+      return deadlineMoment.tz(moment.tz.guess()).format('YYYY-MM-DD HH:mm');
     }
 
+    const getDeadlineProgress = (deadline, timezone) => {
+      const timeRemaining = getTimeRemaining(deadline, timezone);
+      if (timeRemaining <= 0) {
+        return { percentage: 0, status: '' };
+      }
+
+      const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+      if (timeRemaining > thirtyDaysInMs) {
+        return { percentage: 0, status: '' };
+      }
+
+      const percentage = Math.floor(100 - (timeRemaining / thirtyDaysInMs) * 100);
+
+      let status = 'success';
+      if (percentage >= 90) {
+        status = 'exception';
+      } else if (percentage >= 60) {
+        status = 'warning';
+      }
+
+      return { percentage, status };
+    };
+
     // --- Watchers ---
-    watch(selectedTypes, (newVal, oldVal) => {
-        if(newVal.length === Object.keys(types.value).length){
-            showAllTypes.value = true;
-        } else if (newVal.length === 0 && oldVal.length > 0) {
-            // from some to none
-        }
-        else {
-            showAllTypes.value = false;
-        }
-    })
+    watch(selectedTypes, (newVal) => {
+      if (newVal.length === Object.keys(types.value).length) {
+        showAllTypes.value = true;
+      } else {
+        showAllTypes.value = false;
+      }
+    });
 
     // --- Lifecycle Hooks ---
     onMounted(() => {
@@ -247,7 +268,8 @@ export default defineComponent({
       getRankType,
       getTimeRemaining,
       isUpcoming,
-      formatDeadline
+      formatDeadline,
+      getDeadlineProgress
     };
   },
 });
@@ -298,21 +320,25 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .search-input {
   max-width: 400px;
+  min-width: 250px;
+  flex-grow: 1;
 }
 
 .type-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
 }
+
 .all-types-checkbox {
-    border-right: 1px solid #dcdfe6;
-    padding-right: 15px;
+  border-right: 1px solid #dcdfe6;
+  padding-right: 15px;
 }
 
 
@@ -328,10 +354,12 @@ body {
   align-items: center;
   font-weight: bold;
 }
+
 .card-header a {
   color: #409eff;
   text-decoration: none;
 }
+
 .card-header a:hover {
   text-decoration: underline;
 }
@@ -341,28 +369,37 @@ body {
   font-size: 0.9em;
   min-height: 50px;
 }
+
 .conf-body .type-tag {
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 
-.deadline-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.95em;
+.countdown-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95em;
+  flex-wrap: wrap;
 }
+
+.progress-wrapper {
+  margin-top: 8px;
+}
+
 .deadline-info .el-icon {
-    font-size: 1.2em;
-}
-.countdown-text, .deadline-text {
-    font-weight: 500;
-}
-.deadline-date {
-    color: #909399;
-    font-size: 0.85em;
-    margin-left: auto;
+  font-size: 1.2em;
 }
 
+.countdown-text,
+.deadline-text {
+  font-weight: 500;
+}
+
+.deadline-date {
+  color: #909399;
+  font-size: 0.85em;
+  margin-left: auto;
+}
 
 /* Pagination */
 .main-pagination {
