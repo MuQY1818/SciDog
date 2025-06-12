@@ -2,25 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build"
-    },
-    {
-      "src": "backend/app.py",
+      "src": "/backend/app.py",
       "use": "@vercel/python",
       "config": {
-        "includeFiles": "backend/data_source/**"
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.9"
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/backend/app.py"
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/backend/app.py"
     }
   ]
 } 
