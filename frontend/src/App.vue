@@ -164,12 +164,8 @@ export default defineComponent({
     const fetchData = async () => {
       try {
         // 在开发环境和打包后的 Electron 应用中，后端服务都运行在本地的 5000 端口
-        // const baseURL = "http://127.0.0.1:5000";
-        // const res = await axios.get(`${baseURL}/api/conferences`);
-
-        // New: Fetch data from the static JSON file.
-        // The file is in the `public` directory, so it will be served at the root.
-        const res = await axios.get('/conferences.json');
+        const baseURL = "http://127.0.0.1:5000";
+        const res = await axios.get(`${baseURL}/api/conferences`);
         
         allConfs.value = res.data.conferences;
         types.value = res.data.type_mapping;

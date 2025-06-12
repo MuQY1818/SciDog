@@ -1,89 +1,94 @@
 # SciDog - 科研狗
 
-一个聚合全球学术会议 DDL 的平台。
+一个聚合全球学术会议 DDL (Deadline) 的平台，旨在帮助科研人员轻松追踪重要学术会议的截稿日期。
+
+![SciDog Screenshot](https://raw.githubusercontent.com/CannedShrimp/SciDog/main/screenshot.png)
 
 ## ✨ 主要功能
 
-- 聚合展示全球学术会议、期刊的 DDL 信息。
-- 支持按会议等级 (CCF-A, B, C, Non-CCF) 筛选。
-- 支持按技术领域 (AI, DB, NW...) 筛选。
-- 支持关键词模糊搜索。
-- DDL 截止日期倒计时及进度条，一目了然。
-- 响应式卡片设计，在桌面和移动设备上均有良好体验。
+- **会议聚合**: 集中展示计算机科学领域的全球学术会议信息。
+- **DDL 倒计时**: 直观地展示每个会议的截稿日期倒计时和提交通道开放进度。
+- **分类筛选**:
+  - 按 **CCF 等级** (A, B, C, Non-CCF) 筛选会议。
+  - 按**研究领域** (如 AI, CV, NLP, DB 等) 筛选会议。
+- **关键词搜索**: 快速搜索特定会议的名称或简称。
+- **响应式设计**: 在桌面和移动设备上均有良好的浏览体验。
 
-## 🚀 一键部署 (Vercel)
+## 🛠️ 技术栈
 
-本项目已为 Vercel 平台优化，您可以非常轻松地免费部署上线。
+- **前端**:
+  - [Vue.js 3](https://vuejs.org/) (使用 Composition API)
+  - [Vite](https://vitejs.dev/)
+  - [Element Plus](https://element-plus.org/)
+  - [axios](https://axios-http.com/)
+- **后端**:
+  - [Python](https://www.python.org/)
+  - [Flask](https://flask.palletsprojects.com/)
+  - [PyYAML](https://pyyaml.org/)
 
-1.  **Fork 本仓库**：点击本页面右上角的 "Fork" 按钮，将此项目复制到您自己的 GitHub 账号下。
-2.  **登录 Vercel**: 使用您的 GitHub 账号登录 [Vercel](https://vercel.com/)。
-3.  **新建项目**: 在 Vercel 的控制面板 (Dashboard) 中，点击 "Add New..." -> "Project"。
-4.  **导入仓库**: 从列表中选择您刚刚 Fork 的 `SciDog` 仓库，点击 "Import"。
-5.  **部署**: Vercel 会自动识别我们配置好的 `vercel.json` 文件，您无需做任何修改，直接点击 "Deploy" 按钮。
+## 本地开发指南
 
-等待1-2分钟，您的 SciDog 网站就成功部署到全球网络，并拥有一个 `.vercel.app` 的公开访问域名了！之后您对项目代码的任何 `git push` 操作，Vercel 都会自动为您重新部署。
+请遵循以下步骤在您的本地环境中运行本项目。
 
-## 本地开发
+### 1. 环境准备
 
-1.  克隆仓库: `git clone <your-repo-url>`
-2.  配置后端:
-    ```bash
-    cd backend
-    python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    pip install -r requirements.txt
-    flask run
-    ```
-3.  配置前端:
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-项目将在 `http://localhost:5173` 运行。
+- 安装 [Node.js](https://nodejs.org/en/) (版本 >= 16.x)
+- 安装 [Python](https://www.python.org/downloads/) (版本 >= 3.8.x)
+- 一个包管理器，如 `npm` 或 `yarn`。
 
-## 项目愿景
+### 2. 克隆项目
 
-我们致力于提供一个集信息聚合、智能推荐、实用工具于一体的平台，让科研工作更高效、更专注。
+```bash
+git clone https://github.com/CannedShrimp/SciDog.git
+cd SciDog
+```
 
-## 核心功能
+### 3. 后端设置
 
-- **信息聚合与查询**:
-    - [ ] **会议信息**: 自动同步全球主要学术会议的 DDL、举办地、官网链接，并根据 CCF/CORE 等常见评级进行分类。
-    - [ ] **期刊信息**: 提供主流期刊的中科院/JCR 分区、影响因子、审稿周期等关键指标查询。
-    - [ ] **最新论文**: 实时追踪顶会、顶刊的最新发表论文，并提供个性化订阅服务。
+后端服务为前端提供会议数据 API。
 
-- **智能工具箱**:
-    - [ ] DDL 订阅与日历同步功能。
-    - [ ] 论文投稿智能推荐。
-    - [ ] 科研工具导航（文献管理、在线 LaTex、语法检查等）。
+```bash
+# 1. 进入后端目录
+cd backend
 
-- **个性化服务**:
-    - [ ] 用户可以根据自己的研究领域定制个性化主页。
-    - [ ] 追踪特定会议/期刊的动态。
+# 2. (推荐) 创建并激活 Python 虚拟环境
+# Windows
+python -m venv venv
+.\\venv\\Scripts\\activate
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
 
-## 技术架构
+# 3. 安装依赖
+pip install -r requirements.txt
 
-- **前端**: Vue.js / React
-- **后端**: Python (Flask/Django)
-- **数据库**: PostgreSQL / MongoDB
-- **数据采集**: Scrapy / BeautifulSoup / Playwright
-- **任务调度**: Celery / APScheduler
-- **部署**: Docker
+# 4. 运行后端服务
+python scidog_backend.py
+```
 
-## 路线图 (Roadmap)
+运行成功后，后端服务将在 `http://127.0.0.1:5000` 上监听。请保持此终端窗口的运行状态。
 
-- **Phase 1 (MVP)**:
-    - [ ] 完成计算机科学领域 CCF 会议信息的自动采集与展示。
-    - [ ] 构建基本的前端查询页面，支持按等级和 DDL 排序。
-    - [ ] 搭建后端 API 服务。
+### 4. 前端设置
 
-- **Phase 2**:
-    - [ ] 引入期刊分区数据。
-    - [ ] 开发用户系统，支持个性化关注。
-    - [ ] 实现 DDL 邮件提醒功能。
+前端是用户交互的主界面。
 
-- **Phase 3**:
-    - [ ] 上线"最新论文"模块。
-    - [ ] 丰富"工具箱"内容。
-    - [ ] 探索基于内容的智能推荐功能。 
+```bash
+# 1. 打开一个新的终端，进入前端目录
+cd frontend
+
+# 2. 安装依赖
+npm install
+
+# 3. 运行前端开发服务器
+npm run dev
+```
+
+运行成功后，Vite 会启动一个开发服务器，通常在 `http://localhost:5173`。
+
+### 5. 访问项目
+
+在浏览器中打开前端开发服务器的地址 (例如 `http://localhost:5173`)，您应该能看到 SciDog 的主界面，并且所有会议数据都已成功加载。
+
+## 📝 许可证
+
+本项目采用 [MIT](https://opensource.org/licenses/MIT) 许可证。 
