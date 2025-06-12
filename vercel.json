@@ -8,11 +8,22 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "outputDirectory": "dist" }
+      "config": {
+        "outputDirectory": "frontend/dist"
+      }
     }
   ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "backend/app.py" },
-    { "source": "/(.*)", "destination": "frontend/dist/index.html" }
+  "routes": [
+    {
+      "src": "/api/.*",
+      "dest": "/backend/app.py"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
   ]
 } 
